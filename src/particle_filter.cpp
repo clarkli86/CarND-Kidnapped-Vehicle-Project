@@ -31,7 +31,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-  num_particles = 150;  // TODO: Set the number of particles
+  num_particles = 100;  // TODO: Set the number of particles
 
   particles.resize(num_particles);
 
@@ -63,19 +63,23 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   default_random_engine gen;
   // This line creates a normal (Gaussian) distribution for x
 
-  if (fabs(yaw_rate) < 0.0001)
+  // Avoid division by zero
+  if (fabs(yaw_rate) < EPSILON)
   {
-    yaw_rate = 0.0001;
+    yaw_rate = EPSILON;
   }
 
   normal_distribution<double> dist_x(0, std_pos[0]);
-  normal_distribution<double> dist_y(0, std_pos[0]);
-  normal_distribution<double> dist_theta(0, std_pos[0]);
+  normal_distribution<double> dist_y(0, std_pos[1]);
+  normal_distribution<double> dist_theta(0, std_pos[2]);
 
   for (auto & particle : particles)
   {
-    particle.x     = particle.x + cos(particle.theta + yaw_rate * delta_t) * velocity * delta_t;
-    particle.y     = particle.y + sin(particle.theta + yaw_rate * delta_t) * velocity * delta_t;
+    // Slightly better x error 0.01 than below
+    particle.x     = particle.x + velocity / yaw_rate * (sin(particle.theta + yaw_rate * delta_t) - sin(particle.theta));
+    particle.y     = particle.y + velocity / yaw_rate * (cos(particle.theta) - cos(particle.theta + yaw_rate * delta_t));
+    //particle.x     = particle.x + cos(particle.theta + yaw_rate * delta_t) * velocity * delta_t;
+    //particle.y     = particle.y + sin(particle.theta + yaw_rate * delta_t) * velocity * delta_t;
     particle.theta = particle.theta + yaw_rate * delta_t;
 
     particle.x     = particle.x + dist_x(gen);
@@ -154,10 +158,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     predicted.push_back({landmark.id_i, landmark.x_f, landmark.y_f});
   }
 
-  int i = 0, j = 0;
   for (auto & particle : particles)
   {
-    ++i;
     // First convert observations to map frame reference
     // Make a copy of the original observation
     std::vector<LandmarkObs> observations_map = observations;
@@ -177,10 +179,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     vector<double> sense_x, sense_y;
 
     particle.weight = 1;
-    j = 0;
     for (auto & observation: observations_map)
     {
-      ++j;
       // This should not happen
       assert(observation.id != -1);
 
@@ -201,6 +201,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     SetAssociations(particle, associations, sense_x, sense_y);
   }
+
   // Finally normalise the weights for resampling
   float weight_sum = 0;
   for (auto & particle : particles)
