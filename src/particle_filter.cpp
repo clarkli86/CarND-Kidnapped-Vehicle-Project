@@ -23,6 +23,7 @@ using namespace std;
 
 namespace {
 static constexpr float MAX_DIST = 99999999;
+static constexpr float EPSILON  = 0.0001;
 }
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
@@ -30,7 +31,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-  num_particles = 200;  // TODO: Set the number of particles
+  num_particles = 150;  // TODO: Set the number of particles
 
   particles.resize(num_particles);
 
@@ -206,6 +207,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   {
     weight_sum += particle.weight;
   }
+
+  // Check for divison by zero
+  if (weight_sum < EPSILON)
+  {
+    cout << "weight_sum too small!" << endl;
+    return;
+  }
+
   for (auto & particle : particles)
   {
     particle.weight /= weight_sum;
