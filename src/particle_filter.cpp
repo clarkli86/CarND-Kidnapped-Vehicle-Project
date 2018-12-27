@@ -236,23 +236,6 @@ void ParticleFilter::resample() {
   }
 
   particles = resampled;
-
-#if 0
-  // Another implementation Spinning wheel
-  float beta = 0;
-  auto w_max = max(w);
-  size_t index = int(random.random() * num_samples);
-  for (size_t i = 0; i < num_samples; ++i)
-  {
-    beta = beta + random.random() * 2 * w_max;
-    while (beta > w[index])
-    {
-        beta = beta - w[index]
-        index = (index + 1) % num_samples;
-    }
-    resamples.push_back(particles[index]);
-  }
-#endif
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations,
